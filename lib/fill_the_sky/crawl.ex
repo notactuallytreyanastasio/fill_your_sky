@@ -1,0 +1,75 @@
+defmodule FillTheSky.Crawl do
+  @moduledoc """
+  Context for managing crawl state: seeds and pagination cursors.
+  """
+
+  import Ecto.Query
+
+  alias FillTheSky.Crawl.{CrawlCursor, CrawlSeed}
+  alias FillTheSky.Repo
+
+  # --- Seeds ---
+
+  @spec add_seed(String.t(), keyword()) :: {:ok, CrawlSeed.t()} | {:error, Ecto.Changeset.t()}
+  def add_seed(did, opts \\ []) do
+    %CrawlSeed{}
+    |> CrawlSeed.changeset(%{
+      did: did,
+      handle: Keyword.get(opts, :handle),
+      depth: Keyword.get(opts, :depth, 2),
+      priority: Keyword.get(opts, :priority, 0)
+    })
+    |> Repo.insert(on_conflict: :nothing, conflict_target: :did)
+  end
+
+  @spec pending_seeds(non_neg_integer()) :: list(CrawlSeed.t())
+  def pending_seeds(limit \\ 50) do
+    from(s in CrawlSeed,
+      where: s.status == "pending",
+      order_by: [desc: s.priority, asc: s.inserted_at],
+      limit: ^limit
+    )
+    |> Repo.all()
+  end
+
+  @spec update_seed_status(CrawlSeed.t(), String.t()) ::
+          {:ok, CrawlSeed.t()} | {:error, Ecto.Changeset.t()}
+  def update_seed_status(seed, status) do
+    seed
+    |> CrawlSeed.changeset(%{status: status})
+    |> Repo.update()
+  end
+
+  # --- Cursors ---
+
+  @spec get_or_create_cursor(String.t(), String.t()) ::
+          {:ok, CrawlCursor.t()} | {:error, Ecto.Changeset.t()}
+  def get_or_create_cursor(endpoint, target_did) do
+    case Repo.get_by(CrawlCursor, endpoint: endpoint, target_did: target_did) do
+      nil ->
+        %CrawlCursor{}
+        |> CrawlCursor.changeset(%{endpoint: endpoint, target_did: target_did})
+        |> Repo.insert()
+
+      cursor ->
+        {:ok, cursor}
+    end
+  end
+
+  @spec update_cursor(CrawlCursor.t(), map()) ::
+          {:ok, CrawlCursor.t()} | {:error, Ecto.Changeset.t()}
+  def update_cursor(cursor, attrs) do
+    cursor
+    |> CrawlCursor.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @spec incomplete_cursors(String.t()) :: list(CrawlCursor.t())
+  def incomplete_cursors(endpoint) do
+    from(c in CrawlCursor,
+      where: c.endpoint == ^endpoint and c.completed == false,
+      order_by: [asc: c.updated_at]
+    )
+    |> Repo.all()
+  end
+end
