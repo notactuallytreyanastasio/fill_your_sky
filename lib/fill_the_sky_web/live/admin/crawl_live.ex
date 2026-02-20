@@ -6,6 +6,8 @@ defmodule FillTheSkyWeb.Admin.CrawlLive do
 
   use FillTheSkyWeb, :live_view
 
+  require Logger
+
   alias FillTheSky.Bluesky.Client
   alias FillTheSky.Crawl
   alias FillTheSky.Graph
@@ -57,11 +59,16 @@ defmodule FillTheSkyWeb.Admin.CrawlLive do
   end
 
   def handle_event("start_crawl", _params, socket) do
+    # Reset any seeds stuck in "crawling" from a crashed previous run
+    {reset_count, _} = Crawl.reset_stale_seeds()
+    if reset_count > 0, do: Logger.info("Reset #{reset_count} stale seeds to pending")
+
     max_depth =
-      case Crawl.pending_seeds(1) do
-        [seed | _] -> seed.depth || 1
-        [] -> 1
-      end
+      Crawl.pending_seeds(100)
+      |> Enum.map(& &1.depth)
+      |> Enum.max(fn -> 1 end)
+
+    Logger.info("Starting crawl with max_depth=#{max_depth}")
 
     result =
       DynamicSupervisor.start_child(
@@ -76,7 +83,11 @@ defmodule FillTheSkyWeb.Admin.CrawlLive do
 
       {:error, {:already_started, _pid}} ->
         enqueue_pending_seeds()
-        {:noreply, assign(socket, crawl_running: true)}
+        {:noreply, assign(socket, crawl_running: true, seeds: Crawl.list_seeds())}
+
+      {:error, reason} ->
+        Logger.warning("Failed to start crawl pipeline: #{inspect(reason)}")
+        {:noreply, assign(socket, flash_msg: "Failed to start: #{inspect(reason)}")}
     end
   end
 
@@ -131,9 +142,12 @@ defmodule FillTheSkyWeb.Admin.CrawlLive do
 
   defp enqueue_pending_seeds do
     seeds = Crawl.pending_seeds(100)
+    Logger.info("Enqueuing #{length(seeds)} pending seeds")
 
     Enum.each(seeds, fn seed ->
-      FollowGraphProducer.enqueue(seed.did, seed.depth || 0)
+      Logger.info("Enqueuing seed: #{seed.handle || seed.did} max_depth=#{seed.depth}")
+      # Seeds always start at depth 0; seed.depth is the max_depth for the pipeline
+      FollowGraphProducer.enqueue(seed.did, 0)
       Crawl.update_seed_status(seed, "crawling")
     end)
   end

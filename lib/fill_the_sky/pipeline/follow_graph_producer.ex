@@ -14,7 +14,6 @@ defmodule FillTheSky.Pipeline.FollowGraphProducer do
 
   @type state :: %{
           queue: :queue.queue(),
-          pending_demand: non_neg_integer(),
           max_depth: non_neg_integer()
         }
 
@@ -51,11 +50,11 @@ defmodule FillTheSky.Pipeline.FollowGraphProducer do
   @spec init(keyword()) :: {:producer, state()}
   def init(opts) do
     max_depth = Keyword.get(opts, :max_depth, 2)
+    Logger.info("FollowGraphProducer started with max_depth=#{max_depth}")
 
     {:producer,
      %{
        queue: :queue.new(),
-       pending_demand: 0,
        max_depth: max_depth
      }}
   end
@@ -80,15 +79,13 @@ defmodule FillTheSky.Pipeline.FollowGraphProducer do
   end
 
   @impl true
-  def handle_demand(demand, state) do
-    state = %{state | pending_demand: state.pending_demand + demand}
+  def handle_demand(_demand, state) do
     {events, state} = dispatch_events(state)
     {:noreply, events, state}
   end
 
   # --- Private ---
 
-  defp dispatch_events(%{pending_demand: 0} = state), do: {[], state}
   defp dispatch_events(%{queue: {[], []}} = state), do: {[], state}
 
   defp dispatch_events(state) do
@@ -104,22 +101,11 @@ defmodule FillTheSky.Pipeline.FollowGraphProducer do
             events =
               build_events(follows, did, depth, state.max_depth, new_dids, cursor_completed)
 
-            fulfilled = min(length(events), state.pending_demand)
-            {taken, overflow} = Enum.split(events, fulfilled)
+            Logger.info(
+              "Producer: #{length(events)} events for #{did} (depth=#{depth}, completed=#{cursor_completed})"
+            )
 
-            # Put overflow events back (if we somehow got more than demanded)
-            overflow_queue =
-              Enum.reduce(overflow, state.queue, fn _evt, q ->
-                q
-              end)
-
-            state = %{
-              state
-              | pending_demand: state.pending_demand - fulfilled,
-                queue: overflow_queue
-            }
-
-            {taken, state}
+            {events, state}
 
           {:error, reason} ->
             Logger.warning("Failed to fetch follows for #{did}: #{inspect(reason)}")
@@ -165,7 +151,7 @@ defmodule FillTheSky.Pipeline.FollowGraphProducer do
     end
   end
 
-  defp build_events(follows, _did, depth, max_depth, new_dids, cursor_completed) do
+  defp build_events(follows, did, depth, max_depth, new_dids, cursor_completed) do
     follow_events =
       Enum.map(follows, fn edge ->
         %Broadway.Message{
@@ -174,9 +160,14 @@ defmodule FillTheSky.Pipeline.FollowGraphProducer do
         }
       end)
 
-    # If this page is done and depth allows, enqueue discovered DIDs for further crawling
+    # Re-enqueue the source DID to fetch the next page if not done
+    if not cursor_completed do
+      GenStage.cast(self(), {:enqueue, did, depth})
+    end
+
+    # Emit discovery events on EVERY page (not just last) so BFS expands properly
     discovery_events =
-      if cursor_completed and depth < max_depth do
+      if depth < max_depth and new_dids != [] do
         [
           %Broadway.Message{
             data: %{type: :discovered_dids, dids: new_dids, depth: depth + 1},
@@ -184,11 +175,6 @@ defmodule FillTheSky.Pipeline.FollowGraphProducer do
           }
         ]
       else
-        # If not completed, re-enqueue to fetch next page
-        if not cursor_completed do
-          GenStage.cast(self(), {:enqueue, hd(follows).follower_did, depth})
-        end
-
         []
       end
 

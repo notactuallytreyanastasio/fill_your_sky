@@ -19,7 +19,17 @@ defmodule FillTheSky.Crawl do
       depth: Keyword.get(opts, :depth, 2),
       priority: Keyword.get(opts, :priority, 0)
     })
-    |> Repo.insert(on_conflict: :nothing, conflict_target: :did)
+    |> Repo.insert(
+      on_conflict: {:replace, [:status, :depth, :handle, :updated_at]},
+      conflict_target: :did,
+      returning: true
+    )
+  end
+
+  @spec reset_stale_seeds() :: {non_neg_integer(), nil}
+  def reset_stale_seeds do
+    from(s in CrawlSeed, where: s.status == "crawling")
+    |> Repo.update_all(set: [status: "pending", updated_at: DateTime.utc_now()])
   end
 
   @spec list_seeds() :: list(CrawlSeed.t())
