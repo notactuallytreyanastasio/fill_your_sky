@@ -13,6 +13,7 @@ defmodule FillTheSky.Application do
       {DNSCluster, query: Application.get_env(:fill_the_sky, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: FillTheSky.PubSub},
       FillTheSky.Bluesky.RateLimiter,
+      FillTheSky.ML.PythonWorker,
       {DynamicSupervisor, name: FillTheSky.PipelineSupervisor, strategy: :one_for_one},
       # Start to serve requests, typically the last entry
       FillTheSkyWeb.Endpoint
