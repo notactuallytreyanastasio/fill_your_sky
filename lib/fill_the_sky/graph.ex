@@ -126,14 +126,14 @@ defmodule FillTheSky.Graph do
     Repo.aggregate(from(u in User, where: not is_nil(u.profile_fetched_at)), :count)
   end
 
-  @spec export_edges() :: list({String.t(), String.t()})
+  @spec export_edges() :: list(list(String.t()))
   def export_edges do
     from(f in Follow,
       join: follower in User,
       on: f.follower_id == follower.id,
       join: following in User,
       on: f.following_id == following.id,
-      select: {follower.did, following.did}
+      select: [follower.did, following.did]
     )
     |> Repo.all()
   end

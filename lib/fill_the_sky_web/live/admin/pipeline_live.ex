@@ -149,7 +149,7 @@ defmodule FillTheSkyWeb.Admin.PipelineLive do
                 <span class={[
                   "px-2 py-0.5 rounded text-xs",
                   run.status == "complete" && "bg-green-100 text-green-700",
-                  run.status == "running" && "bg-yellow-100 text-yellow-700",
+                  run.status in ~w(running exporting computing importing) && "bg-yellow-100 text-yellow-700",
                   run.status == "pending" && "bg-gray-100 text-gray-700",
                   run.status == "error" && "bg-red-100 text-red-700"
                 ]}>

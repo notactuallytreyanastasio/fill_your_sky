@@ -33,15 +33,16 @@ defmodule FillTheSky.ML.CommunityDetection do
   # --- Private ---
 
   defp execute_pipeline(run, resolution, n2v_dimensions) do
+    Logger.info("ML step 1/5: Exporting graph data from Postgres...")
+    Communities.update_run(run, %{status: "exporting"})
+
     edges = Graph.export_edges()
     bios = Graph.export_user_bios()
-
     user_count = Graph.user_count()
     edge_count = length(edges)
 
-    Logger.info("Starting ML pipeline: #{user_count} users, #{edge_count} edges")
-
-    Communities.update_run(run, %{user_count: user_count, edge_count: edge_count})
+    Logger.info("ML step 2/5: Exported #{user_count} users, #{edge_count} edges. Starting Python pipeline...")
+    Communities.update_run(run, %{status: "computing", user_count: user_count, edge_count: edge_count})
 
     case PythonWorker.run_pipeline(%{
            edges: edges,
@@ -50,6 +51,8 @@ defmodule FillTheSky.ML.CommunityDetection do
            n2v_dimensions: n2v_dimensions
          }) do
       {:ok, results} ->
+        Logger.info("ML step 4/5: Python complete. Importing results...")
+        Communities.update_run(run, %{status: "importing"})
         import_results(run, results)
 
       {:error, reason} ->

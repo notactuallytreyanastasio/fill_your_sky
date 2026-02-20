@@ -14,7 +14,7 @@ defmodule FillTheSky.Communities.CommunityRun do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
-  @valid_statuses ["pending", "running", "complete", "error"]
+  @valid_statuses ["pending", "running", "exporting", "computing", "importing", "complete", "error"]
 
   schema "community_runs" do
     field :status, :string, default: "pending"

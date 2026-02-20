@@ -173,13 +173,13 @@ defmodule FillTheSky.GraphTest do
   end
 
   describe "export operations" do
-    test "export_edges/0 returns follow edges as DID tuples" do
+    test "export_edges/0 returns follow edges as DID pairs" do
       {:ok, alice} = Graph.upsert_user_by_did("did:plc:exp_alice")
       {:ok, bob} = Graph.upsert_user_by_did("did:plc:exp_bob")
       Graph.create_follow(alice.id, bob.id)
 
       edges = Graph.export_edges()
-      assert {"did:plc:exp_alice", "did:plc:exp_bob"} in edges
+      assert ["did:plc:exp_alice", "did:plc:exp_bob"] in edges
     end
 
     test "export_user_bios/0 returns map of DID to bio" do
