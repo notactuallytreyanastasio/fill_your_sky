@@ -17,7 +17,15 @@ defmodule FillTheSkyWeb.Router do
   scope "/", FillTheSkyWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", MapLive, :index
+    get "/welcome", PageController, :home
+  end
+
+  scope "/admin", FillTheSkyWeb.Admin do
+    pipe_through :browser
+
+    live "/crawl", CrawlLive, :index
+    live "/pipeline", PipelineLive, :index
   end
 
   # Other scopes may use custom stacks.
