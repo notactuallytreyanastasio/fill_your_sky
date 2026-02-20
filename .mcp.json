@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "cicada": {
+      "command": "uvx",
+      "args": [
+        "cicada-mcp"
+      ],
+      "env": {
+        "CICADA_CONFIG_DIR": "/Users/robertgrayson/.cicada/projects/cf938a722b07f8da"
+      }
+    }
+  }
+}
