@@ -90,6 +90,12 @@ defmodule FillTheSky.Pipeline.FollowGraphProducer do
     {:noreply, events, state}
   end
 
+  @impl true
+  def handle_info(:retry_dispatch, state) do
+    {events, state} = dispatch_events(state)
+    {:noreply, events, state}
+  end
+
   # --- Private ---
 
   defp dispatch_events(%{queue: {[], []}} = state), do: {[], state}
@@ -108,14 +114,22 @@ defmodule FillTheSky.Pipeline.FollowGraphProducer do
               build_events(follows, did, depth, state.max_depth, new_dids, cursor_completed)
 
             Logger.info(
-              "Producer: #{length(events)} events for #{did} (depth=#{depth}, completed=#{cursor_completed})"
+              "Producer: #{length(events)} events for #{String.slice(did, 0, 24)} (depth=#{depth}, completed=#{cursor_completed})"
             )
 
             {events, state}
 
+          {:error, :rate_limited} ->
+            # Put the DID back and wait before retrying
+            Logger.warning("Rate limited, backing off 5s (queue=#{:queue.len(state.queue) + 1})")
+            new_queue = :queue.in_r({did, depth}, state.queue)
+            Process.send_after(self(), :retry_dispatch, 5_000)
+            {[], %{state | queue: new_queue}}
+
           {:error, reason} ->
-            Logger.warning("Failed to fetch follows for #{did}: #{inspect(reason)}")
-            dispatch_events(state)
+            Logger.warning("Failed to fetch follows for #{String.slice(did, 0, 24)}: #{inspect(reason)}")
+            # Skip this DID but don't recurse — return empty and let next demand/cast handle it
+            {[], state}
         end
     end
   end

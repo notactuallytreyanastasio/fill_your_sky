@@ -8,6 +8,15 @@ defmodule FillTheSky.Pipeline.FollowGraphPipeline do
 
   require Logger
 
+  @doc false
+  def child_spec(opts) do
+    %{
+      id: __MODULE__,
+      start: {__MODULE__, :start_link, [opts]},
+      restart: :transient
+    }
+  end
+
   alias FillTheSky.Graph
   alias FillTheSky.Pipeline.FollowGraphProducer
 
