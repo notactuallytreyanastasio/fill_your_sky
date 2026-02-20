@@ -7,11 +7,15 @@ defmodule FillTheSky.MixProject do
       version: "0.1.0",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
+      elixirc_options: [warnings_as_errors: true],
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      dialyzer: [
+        plt_add_apps: [:mix, :ex_unit]
+      ]
     ]
   end
 
@@ -65,7 +69,20 @@ defmodule FillTheSky.MixProject do
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+
+      # Data pipeline
+      {:broadway, "~> 1.2"},
+
+      # Python interop for ML (community detection, UMAP, etc.)
+      {:pythonx, "~> 0.4.7"},
+
+      # WebSocket client for Bluesky Jetstream
+      {:fresh, "~> 0.4"},
+
+      # Code quality
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
     ]
   end
 
