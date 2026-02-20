@@ -46,8 +46,8 @@ defmodule FillTheSky.Bluesky.RateLimiterTest do
     GenServer.call(pid, :acquire)
     assert 0 = GenServer.call(pid, :available_tokens)
 
-    # Wait for refill
-    Process.sleep(150)
+    # Simulate the refill timer firing
+    send(pid, :refill)
     assert 3 = GenServer.call(pid, :available_tokens)
   end
 end

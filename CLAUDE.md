@@ -79,6 +79,14 @@ Every test must `assert` expected behavior — no tests that just call a functio
 
 `mix compile --warnings-as-errors` must pass. No unused variables, no missing pattern matches.
 
+### 9. Never Use `Process.sleep`
+
+`Process.sleep/1` is **banned** in all code — production and tests.
+
+- **GenServer timers**: Send the message directly (`send(pid, :refill)`) and use `GenServer.call` as a synchronization point
+- **Waiting for async work**: Use `Process.monitor/1` + `assert_receive {:DOWN, ^ref, ...}` or poll with `receive do after N -> ... end`
+- **Synchronizing GenServer state**: Use `:sys.get_state/1` to ensure prior messages are processed
+
 ## Quality Tools
 
 - **Credo**: `mix credo --strict` must pass
