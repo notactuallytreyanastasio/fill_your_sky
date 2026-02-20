@@ -121,6 +121,11 @@ defmodule FillTheSky.Graph do
   @spec user_count() :: non_neg_integer()
   def user_count, do: Repo.aggregate(User, :count)
 
+  @spec profiles_enriched_count() :: non_neg_integer()
+  def profiles_enriched_count do
+    Repo.aggregate(from(u in User, where: not is_nil(u.profile_fetched_at)), :count)
+  end
+
   @spec export_edges() :: list({String.t(), String.t()})
   def export_edges do
     from(f in Follow,

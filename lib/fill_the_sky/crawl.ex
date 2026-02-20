@@ -22,6 +22,12 @@ defmodule FillTheSky.Crawl do
     |> Repo.insert(on_conflict: :nothing, conflict_target: :did)
   end
 
+  @spec list_seeds() :: list(CrawlSeed.t())
+  def list_seeds do
+    from(s in CrawlSeed, order_by: [desc: s.priority, desc: s.inserted_at])
+    |> Repo.all()
+  end
+
   @spec pending_seeds(non_neg_integer()) :: list(CrawlSeed.t())
   def pending_seeds(limit \\ 50) do
     from(s in CrawlSeed,
@@ -38,6 +44,42 @@ defmodule FillTheSky.Crawl do
     seed
     |> CrawlSeed.changeset(%{status: status})
     |> Repo.update()
+  end
+
+  @spec seed_stats() :: %{
+          pending: non_neg_integer(),
+          crawling: non_neg_integer(),
+          complete: non_neg_integer(),
+          error: non_neg_integer()
+        }
+  def seed_stats do
+    from(s in CrawlSeed,
+      group_by: s.status,
+      select: {s.status, count(s.id)}
+    )
+    |> Repo.all()
+    |> Map.new()
+    |> then(fn counts ->
+      %{
+        pending: Map.get(counts, "pending", 0),
+        crawling: Map.get(counts, "crawling", 0),
+        complete: Map.get(counts, "complete", 0),
+        error: Map.get(counts, "error", 0)
+      }
+    end)
+  end
+
+  @spec cursor_stats() :: %{
+          total: non_neg_integer(),
+          completed: non_neg_integer(),
+          pages_fetched: non_neg_integer()
+        }
+  def cursor_stats do
+    total = Repo.aggregate(CrawlCursor, :count)
+    completed = Repo.aggregate(from(c in CrawlCursor, where: c.completed == true), :count)
+    pages = Repo.aggregate(CrawlCursor, :sum, :page_count) || 0
+
+    %{total: total, completed: completed, pages_fetched: pages}
   end
 
   # --- Cursors ---

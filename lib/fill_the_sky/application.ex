@@ -12,8 +12,8 @@ defmodule FillTheSky.Application do
       FillTheSky.Repo,
       {DNSCluster, query: Application.get_env(:fill_the_sky, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: FillTheSky.PubSub},
-      # Start a worker by calling: FillTheSky.Worker.start_link(arg)
-      # {FillTheSky.Worker, arg},
+      FillTheSky.Bluesky.RateLimiter,
+      {DynamicSupervisor, name: FillTheSky.PipelineSupervisor, strategy: :one_for_one},
       # Start to serve requests, typically the last entry
       FillTheSkyWeb.Endpoint
     ]

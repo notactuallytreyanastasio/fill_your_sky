@@ -44,7 +44,11 @@ defmodule FillTheSky.Pipeline.FollowGraphPipeline do
     Broadway.Message.put_batcher(message, :follows)
   end
 
-  def handle_message(_processor, %Broadway.Message{data: %{type: :discovered_dids}} = message, _ctx) do
+  def handle_message(
+        _processor,
+        %Broadway.Message{data: %{type: :discovered_dids}} = message,
+        _ctx
+      ) do
     Broadway.Message.put_batcher(message, :discovery)
   end
 
