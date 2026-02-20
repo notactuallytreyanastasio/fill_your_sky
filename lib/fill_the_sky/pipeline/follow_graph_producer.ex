@@ -22,16 +22,26 @@ defmodule FillTheSky.Pipeline.FollowGraphProducer do
 
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts, name: opts[:name] || __MODULE__)
+    GenStage.start_link(__MODULE__, opts, name: opts[:name] || __MODULE__)
+  end
+
+  @spec enqueue(String.t(), non_neg_integer()) :: :ok
+  def enqueue(did, depth \\ 0) do
+    GenStage.cast(__MODULE__, {:enqueue, did, depth})
   end
 
   @spec enqueue(GenServer.server(), String.t(), non_neg_integer()) :: :ok
-  def enqueue(producer \\ __MODULE__, did, depth \\ 0) do
+  def enqueue(producer, did, depth) do
     GenStage.cast(producer, {:enqueue, did, depth})
   end
 
+  @spec enqueue_many(list({String.t(), non_neg_integer()})) :: :ok
+  def enqueue_many(did_depth_pairs) do
+    GenStage.cast(__MODULE__, {:enqueue_many, did_depth_pairs})
+  end
+
   @spec enqueue_many(GenServer.server(), list({String.t(), non_neg_integer()})) :: :ok
-  def enqueue_many(producer \\ __MODULE__, did_depth_pairs) do
+  def enqueue_many(producer, did_depth_pairs) do
     GenStage.cast(producer, {:enqueue_many, did_depth_pairs})
   end
 
@@ -91,7 +101,9 @@ defmodule FillTheSky.Pipeline.FollowGraphProducer do
 
         case fetch_follow_page(did) do
           {:ok, follows, new_dids, cursor_completed} ->
-            events = build_events(follows, did, depth, state.max_depth, new_dids, cursor_completed)
+            events =
+              build_events(follows, did, depth, state.max_depth, new_dids, cursor_completed)
+
             fulfilled = min(length(events), state.pending_demand)
             {taken, overflow} = Enum.split(events, fulfilled)
 
@@ -101,7 +113,12 @@ defmodule FillTheSky.Pipeline.FollowGraphProducer do
                 q
               end)
 
-            state = %{state | pending_demand: state.pending_demand - fulfilled, queue: overflow_queue}
+            state = %{
+              state
+              | pending_demand: state.pending_demand - fulfilled,
+                queue: overflow_queue
+            }
+
             {taken, state}
 
           {:error, reason} ->

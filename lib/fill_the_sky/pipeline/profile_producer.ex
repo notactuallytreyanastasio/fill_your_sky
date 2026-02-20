@@ -13,7 +13,7 @@ defmodule FillTheSky.Pipeline.ProfileProducer do
 
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts, name: opts[:name] || __MODULE__)
+    GenStage.start_link(__MODULE__, opts, name: opts[:name] || __MODULE__)
   end
 
   @impl true
