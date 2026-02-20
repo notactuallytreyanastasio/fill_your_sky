@@ -12,21 +12,24 @@ defmodule FillTheSky.Pipeline.FollowGraphProducerTest do
     end
   end
 
-  describe "enqueue/3" do
+  describe "enqueue via cast" do
     test "accepts DIDs without error" do
       {:ok, pid} = FollowGraphProducer.start_link(max_depth: 1, name: :test_producer_enqueue)
-      assert :ok = FollowGraphProducer.enqueue(:test_producer_enqueue, "did:plc:test123", 0)
+      GenStage.cast(pid, {:enqueue, "did:plc:test123", 0})
+      # Verify process is still alive (didn't crash)
+      assert Process.alive?(pid)
       GenStage.stop(pid)
     end
   end
 
-  describe "enqueue_many/2" do
+  describe "enqueue_many via cast" do
     test "accepts multiple DID/depth pairs" do
       {:ok, pid} = FollowGraphProducer.start_link(max_depth: 1, name: :test_producer_many)
 
       pairs = [{"did:plc:a", 0}, {"did:plc:b", 0}, {"did:plc:c", 0}]
-      assert :ok = FollowGraphProducer.enqueue_many(:test_producer_many, pairs)
+      GenStage.cast(pid, {:enqueue_many, pairs})
 
+      assert Process.alive?(pid)
       GenStage.stop(pid)
     end
   end

@@ -37,11 +37,11 @@ defmodule FillTheSky.Pipeline.FollowGraphPipelineTest do
       {:ok, pipeline} =
         FollowGraphPipeline.start_link(
           name: :test_crawl_pipeline,
-          producer_opts: [max_depth: 0, name: :test_crawl_producer]
+          producer_opts: [max_depth: 0]
         )
 
-      # Enqueue the seed
-      FillTheSky.Pipeline.FollowGraphProducer.enqueue(:test_crawl_producer, did, 0)
+      # Enqueue the seed via Broadway producer lookup
+      FillTheSky.Pipeline.FollowGraphProducer.enqueue(:test_crawl_pipeline, did, 0)
 
       # Poll until data lands in the database
       poll_until(fn -> Graph.user_count() > 0 and Graph.follow_count() > 0 end, 10_000)

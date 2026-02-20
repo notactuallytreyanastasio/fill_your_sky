@@ -24,23 +24,29 @@ defmodule FillTheSky.Pipeline.FollowGraphProducer do
     GenStage.start_link(__MODULE__, opts, name: opts[:name] || __MODULE__)
   end
 
+  @default_broadway FillTheSky.Pipeline.FollowGraphPipeline
+
   @spec enqueue(String.t(), non_neg_integer()) :: :ok
   def enqueue(did, depth \\ 0) do
-    GenStage.cast(__MODULE__, {:enqueue, did, depth})
+    [producer] = Broadway.producer_names(@default_broadway)
+    GenStage.cast(producer, {:enqueue, did, depth})
   end
 
-  @spec enqueue(GenServer.server(), String.t(), non_neg_integer()) :: :ok
-  def enqueue(producer, did, depth) do
+  @spec enqueue(atom(), String.t(), non_neg_integer()) :: :ok
+  def enqueue(broadway, did, depth) when is_atom(broadway) do
+    [producer] = Broadway.producer_names(broadway)
     GenStage.cast(producer, {:enqueue, did, depth})
   end
 
   @spec enqueue_many(list({String.t(), non_neg_integer()})) :: :ok
   def enqueue_many(did_depth_pairs) do
-    GenStage.cast(__MODULE__, {:enqueue_many, did_depth_pairs})
+    [producer] = Broadway.producer_names(@default_broadway)
+    GenStage.cast(producer, {:enqueue_many, did_depth_pairs})
   end
 
-  @spec enqueue_many(GenServer.server(), list({String.t(), non_neg_integer()})) :: :ok
-  def enqueue_many(producer, did_depth_pairs) do
+  @spec enqueue_many(atom(), list({String.t(), non_neg_integer()})) :: :ok
+  def enqueue_many(broadway, did_depth_pairs) when is_atom(broadway) do
+    [producer] = Broadway.producer_names(broadway)
     GenStage.cast(producer, {:enqueue_many, did_depth_pairs})
   end
 
