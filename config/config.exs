@@ -60,6 +60,24 @@ config :logger, :default_formatter,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Configure Pythonx for ML pipeline
+config :pythonx, :uv_init,
+  pyproject_toml: """
+  [project]
+  name = "fill-the-sky-ml"
+  version = "0.0.0"
+  requires-python = ">=3.11"
+  dependencies = [
+    "python-igraph",
+    "leidenalg",
+    "node2vec",
+    "gensim",
+    "umap-learn",
+    "scikit-learn",
+    "networkx"
+  ]
+  """
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

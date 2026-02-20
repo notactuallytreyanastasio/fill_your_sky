@@ -44,15 +44,12 @@ membership = partition.membership
 # Node2Vec embeddings
 from node2vec import Node2Vec
 
-# Convert to undirected for Node2Vec
-g_undirected = g.to_undirected()
-
-# node2vec needs a networkx graph
+# node2vec needs a networkx graph (undirected)
 import networkx as nx
 
 nx_graph = nx.Graph()
 nx_graph.add_nodes_from(range(len(all_dids)))
-nx_graph.add_edges_from([(e.source, e.target) for e in g_undirected.es])
+nx_graph.add_edges_from([(e.source, e.target) for e in g.as_undirected().es])
 
 node2vec = Node2Vec(
     nx_graph,
@@ -154,4 +151,4 @@ for i in range(len(all_dids)):
         "community": membership[i],
     })
 
-result = json.dumps({"communities": communities_out, "embeddings": embeddings_out})
+json.dumps({"communities": communities_out, "embeddings": embeddings_out})

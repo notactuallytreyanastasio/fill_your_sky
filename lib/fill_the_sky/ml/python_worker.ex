@@ -57,7 +57,9 @@ defmodule FillTheSky.ML.PythonWorker do
           }
         )
 
-      case Jason.decode(result) do
+      json_string = Pythonx.decode(result)
+
+      case Jason.decode(json_string) do
         {:ok, decoded} -> {:ok, decoded}
         {:error, reason} -> {:error, {:json_decode, reason}}
       end
